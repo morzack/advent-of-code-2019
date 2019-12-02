@@ -1,4 +1,4 @@
-inputs = [int(i) for i in open("input/day-2.txt", 'r').read().split(",")]
+inputs = [int(i) for i in open("inputs/day-2.txt", 'r').read().split(",")]
 target = 19690720
 
 def run(inputs_initial):

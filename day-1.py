@@ -6,6 +6,6 @@ def full_calc(mass):
         masses.append(mass)
     return sum(masses[1:])
 
-inputs = open('input.txt', 'r').readlines()
+inputs = open('inputs/day-1.txt', 'r').readlines()
 print(sum([calc_fuel(int(x)) for x in inputs]))
 print(sum([full_calc(int(x)) for x in inputs]))
