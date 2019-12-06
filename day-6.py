@@ -1,44 +1,27 @@
-get_orbit = lambda x: (x.split(")")[0], x.split(")")[1])
-orbits = [get_orbit(i.strip()) for i in open('inputs/day-6.txt').readlines()]
+orbits = [i.strip().split(")") for i in open('inputs/day-6.txt').readlines()]
+orbits = {i[1]: i[0] for i in orbits}
 
 objects = set()
 for o in orbits:
-    objects.add(o[0])
-    objects.add(o[1])
-
-direct_orbits = len(orbits)
-
-indirect_orbits = 0
+    objects.add(o)
 
 def get_indirect_orbits(ob_id):
-    for i in orbits:
-        if i[1] == ob_id:
-            a = get_indirect_orbits(i[0])
-            a.append(ob_id)
-            return a
-    return [ob_id]
+    orbit_list = []
+    parent_body = orbits[ob_id]
+    while parent_body != 'COM':
+        orbit_list.append(parent_body)
+        parent_body = orbits[parent_body]
+    return orbit_list[::-1]
 
-# for o in objects:
-#     indirect_orbits += get_indirect_orbits(o)
+print(f"Part 1: {sum([len(get_indirect_orbits(o))+1 for o in objects])}")
 
-# print(indirect_orbits)
+start_tree = get_indirect_orbits("YOU")
+end_tree = get_indirect_orbits("SAN")
 
-start = [i for i in orbits if i[1] == "YOU"][0][0]
-end = [i for i in orbits if i[1] == "SAN"][0][0]
-
-start_tree = get_indirect_orbits(start)
-end_tree = get_indirect_orbits(end)
-
-pos = 0
-for i in start_tree[::-1]:
-    following = False
-    for j in end_tree:
-        if j == i:
-            following = True
-        if following:
-            pos += 1
-    if following:
+distance = 0
+for val, i in enumerate(start_tree[::-1]):
+    if i in end_tree:
+        distance = len(end_tree)-end_tree.index(i) + val
         break
-    pos += 1
 
-print(pos-1)
+print(f"Part 2: {distance-1}")
