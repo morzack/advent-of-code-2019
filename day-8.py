@@ -16,7 +16,7 @@ while pos < len(inputs):
         building.append(a)
     layers.append(building)
 
-layer_c_s = 0
+layer_c_s = -1
 min_z = -1
 for layer_c, layer in enumerate(layers):
     z = 0
@@ -37,7 +37,7 @@ for i in layers[layer_c_s]:
         if j == 2:
             twos += 1
 
-print(ones*twos)
+print(f"Part 1: {ones*twos}")
 
 final = {}
 for layer in layers:
@@ -47,7 +47,8 @@ for layer in layers:
                 if (x, y) not in final:
                     final[(x, y)] = col
 
-for y in range(height):
-    for x in range(width):
-        print("#" if final[(x, y)] == 1 else " ", end="")
+print("Part 2:")
+for x in range(width):
+    for y in range(height)[::-1]:
+        print("█" if final[(x, y)] == 1 else " ", end="")
     print("")
