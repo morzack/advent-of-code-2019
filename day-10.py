@@ -9,27 +9,13 @@ with open("inputs/day-10.txt") as f:
             height = y+1
             width = x+1
 
-def get_slope(x1, x2, y1, y2):
-    quadrant = 1
-    dx = x2-x1
-    dy = y2-y1
-    if dx >= 0 and dy >= 0:
-        quadrant = 1
-    elif dx >= 0 and dy < 0:
-        quadrant = 4
-    elif dx < 0 and dy >= 0:
-        quadrant = 2
-    elif dx < 0 and dy < 0:
-        quadrant = 3
-    return dy/dx if dx != 0 else 'INF', quadrant
-
 def get_visible(position):
     slopes = set()
     initial_x, initial_y = position
     for y in range(height):
         for x in range(width):
             if (x, y) in asteroids and not (y == initial_y and x == initial_x):
-                slopes.add(get_slope(x, initial_x, y, initial_y))
+                slopes.add(math.atan2(initial_y-y, initial_x-x))
     return len(slopes)
 
 distances = {asteroid_base: get_visible(asteroid_base) for asteroid_base in asteroids}
@@ -47,8 +33,7 @@ for asteroid in asteroids:
         angle += 360
     angle_asteroids.append((distance, angle, asteroid))
 
-angle_asteroids = sorted(angle_asteroids, key=lambda x: x[0])
-angle_asteroids = sorted(angle_asteroids, key=lambda x: x[1])
+angle_asteroids = sorted(sorted(angle_asteroids, key=lambda x: x[0]), key=lambda x: x[1])
 
 last_angle = -1
 destroyed = 0
