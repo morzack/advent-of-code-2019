@@ -1,7 +1,7 @@
 inputs = [int(i) for i in open("inputs/day-16.txt").read().strip()]
-inputs *= 10000
-offset = int("".join([str(i) for i in inputs[:7]]))
-def apply_phase(inputs):
+
+def apply_phase_part_1(inputs):
+    # Naiive solution
     pattern = [0, 1, 0, -1]
     out = []
     for repeating, _ in enumerate(inputs):
@@ -19,9 +19,23 @@ def apply_phase(inputs):
         out.append(abs(s) % 10)
     return out
 
+def apply_phase_part_2(inputs, offset, times=100):
+    # new and improved solution
+    inputs *= 10000
+    inputs = inputs[offset:]
+    for _ in range(times):
+        s = 0
+        for i, val in enumerate(inputs[::-1]):
+            s = (val + s) % 10
+            inputs[len(inputs)-i-1] = s
+    return inputs[:8]
+
 print_inputs = lambda x: "".join(str(i) for i in x)
 
-for phase in range(100):
-    inputs = apply_phase(inputs)
+inputs_p1 = inputs.copy()
+for _ in range(100):
+    inputs_p1 = apply_phase_part_1(inputs_p1)
+print(f"Part 1: {print_inputs(inputs_p1)[:8]}")
 
-print(print_inputs(inputs[offset:offset+8]))
+offset = int("".join([str(i) for i in inputs[:7]]))
+print(f"Part 2: {print_inputs(apply_phase_part_2(inputs.copy(), offset))}")
