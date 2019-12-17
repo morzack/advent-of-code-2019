@@ -6,10 +6,15 @@ class Controller:
         self.tape = {}
         for i, val in enumerate(inputs):
             self.tape[i] = val
+        self.backup_tape = self.tape.copy()
+        self.reset()
+    
+    def reset(self):
+        self.tape = self.backup_tape.copy()
         self.tape_pos = 0
         self.relative_pos = 0
         self.last_output = 0
-    
+
     def get_tape(self, i):
         return self.tape.get(i, 0)
     
