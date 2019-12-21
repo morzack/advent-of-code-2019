@@ -123,6 +123,7 @@ def get_key_distance(tiles, nodes, pos, end_pos, keys=-1, traversed=-1):
         keys = set()
     if traversed == -1:
         traversed = set()
+        traversed.add(pos)
     if pos == end_pos:
         return 0, True, keys
     adjacent = nodes[pos]
@@ -130,10 +131,11 @@ def get_key_distance(tiles, nodes, pos, end_pos, keys=-1, traversed=-1):
     more_keys = set()
     for node in adjacent:
         if node not in traversed:
+            iter_keys = keys.copy()
             if tiles[node] in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-                keys.add(tiles[node].lower())
+                iter_keys.add(tiles[node].lower())
             traversed.add(node)
-            distance, possible, next_stage_keys = get_key_distance(tiles, nodes, node, end_pos, keys.copy(), traversed.copy())
+            distance, possible, next_stage_keys = get_key_distance(tiles, nodes, node, end_pos, iter_keys.copy(), traversed.copy())
             if possible and distance != -1:
                 if min_distance == -2:
                     min_distance = distance
@@ -170,14 +172,37 @@ def calculate_distances(tiles):
             if other != key:
                 distance, valid, keys_needed = get_key_distance(tiles, nodes, key, other)
                 key_distances[tiles[key]][tiles[other]] = (distance, keys_needed)
-    # then take those precalculated distances and work backwards while finding the shortest path
     return key_distances
 
-tiles, pos = load_tiles()
-# print(traverse_keys_naiive(tiles, pos))
+def traverse_available_keys(start, key_distances, collected_keys=-1, optimizations={}):
+    # return the traversal of all available keys
+    if collected_keys == -1:
+        collected_keys = set(start)
+    next_keys = key_distances[start]
+    min_distance = 0
+    min_key = start
+    for key in next_keys:
+        if key not in collected_keys:
+            next_collected = collected_keys.copy()
+            next_collected.add(key)
+            distance, keys_needed = key_distances[start][key]
+            if len(keys_needed.difference(collected_keys)) == 0:
+                searching_for = (key, frozenset(next_collected))
+                if searching_for in optimizations:
+                    distance_traversed = optimizations[searching_for]
+                else:
+                    distance_traversed, _ = traverse_available_keys(key, key_distances, next_collected, optimizations)
+                    optimizations[searching_for] = distance_traversed
+                distance += distance_traversed
+                if min_distance == 0 or distance < min_distance:
+                    min_distance = distance
+                    min_key = key
+    return min_distance, min_key
+
+tiles, pos = load_tiles("inputs/day-18-p1.txt")
 distances = calculate_distances(tiles)
-print(get_key_traversal("@", "g", distances))
-for tile in distances:
-    print(f"--- {tile} ---")
-    for j in distances[tile]:
-        print(f"   -> {j} {distances[tile][j]}")
+print(f"Part 1: {traverse_available_keys('@', distances)[0]}")
+
+# tiles, pos = load_tiles("inputs/day-18-p2.txt")
+# distances = calculate_distances(tiles)
+# print(f"Part 2: {traverse_available_keys('@', distances)}")
