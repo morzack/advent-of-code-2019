@@ -6,7 +6,7 @@ def load_tiles(input_file="inputs/day-18.txt"):
             for x, val in enumerate(line.strip()):
                 if val == "@":
                     pos = (x, y)
-                    tiles[(x, y)] = "."
+                    tiles[(x, y)] = "@"
                 else:
                     tiles[(x, y)] = val
     return tiles, pos
@@ -53,7 +53,7 @@ def build_nodes(tiles):
     return nodes
 
 def get_all_keys(tiles):
-    return [tile for tile in tiles if tiles[tile] in "abcdefghijklmnopqrstuvwxyz"]
+    return [tile for tile in tiles if tiles[tile] in "abcdefghijklmnopqrstuvwxyz@"]
 
 def get_distance(tiles, nodes, pos, end_pos, keys, traversed=-1):
     if traversed == -1:
@@ -118,5 +118,66 @@ def traverse_keys_naiive(tiles, pos, keys=set()):
             min_distance = min(min_distance, distance)
     return min_distance
 
+def get_key_distance(tiles, nodes, pos, end_pos, keys=-1, traversed=-1):
+    if keys == -1:
+        keys = set()
+    if traversed == -1:
+        traversed = set()
+    if pos == end_pos:
+        return 0, True, keys
+    adjacent = nodes[pos]
+    min_distance = -2
+    more_keys = set()
+    for node in adjacent:
+        if node not in traversed:
+            if tiles[node] in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                keys.add(tiles[node].lower())
+            traversed.add(node)
+            distance, possible, next_stage_keys = get_key_distance(tiles, nodes, node, end_pos, keys.copy(), traversed.copy())
+            if possible and distance != -1:
+                if min_distance == -2:
+                    min_distance = distance
+                    more_keys = next_stage_keys
+                else:
+                    if distance < min_distance:
+                        min_distance = distance
+                        more_keys = next_stage_keys
+    return min_distance + 1, min_distance != -2, more_keys
+
+def get_key_traversal(start, end, key_distances, keys=-1):
+    if keys == -1:
+        keys = set()
+    distance, intermediate = key_distances[start][end]
+    needed_keys = keys.difference(intermediate)
+    keys.add(start)
+    if len(needed_keys) == 0:
+        return distance
+    min_additional = -1
+    for key in needed_keys:
+        i, _ = key_distances[start][key]
+        d = get_key_traversal(key, end, key_distances, keys.copy()) + i
+        if d < min_additional or min_additional == -1:
+            min_additional = d
+    return min_additional
+
+def calculate_distances(tiles):
+    nodes = build_nodes(tiles)
+    # first get the distance between different keys and prereqs
+    keys = get_all_keys(tiles)
+    key_distances = {tiles[i]: {} for i in keys} # {key: {other: (distance, prereq)}}
+    for key in keys:
+        for other in keys:
+            if other != key:
+                distance, valid, keys_needed = get_key_distance(tiles, nodes, key, other)
+                key_distances[tiles[key]][tiles[other]] = (distance, keys_needed)
+    # then take those precalculated distances and work backwards while finding the shortest path
+    return key_distances
+
 tiles, pos = load_tiles()
 # print(traverse_keys_naiive(tiles, pos))
+distances = calculate_distances(tiles)
+print(get_key_traversal("@", "g", distances))
+for tile in distances:
+    print(f"--- {tile} ---")
+    for j in distances[tile]:
+        print(f"   -> {j} {distances[tile][j]}")
