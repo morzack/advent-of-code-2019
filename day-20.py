@@ -20,6 +20,42 @@ def get_adjacent(pos):
         (x, y-1)
     )
 
+def traverse_nodes(nodes, pos, end, traversed=set()):
+    if pos == end:
+        return 0, True
+    min_distance = 0
+    for tile in nodes[pos]:
+        if tile not in traversed:
+            next_traversed = traversed.copy()
+            next_traversed.add(tile)
+            distance, valid = traverse_nodes(nodes, tile, end, next_traversed)
+            distance += 1
+            if valid:
+                if min_distance == 0:
+                    min_distance = distance
+                else:
+                    min_distance = min(distance, min_distance)
+    if min_distance == 0:
+        return 0, False
+    return min_distance, True
+
+def get_available_portals(start, inner_portals, outer_portals, nodes):
+    # basically a traversal to find portals
+    available = {}
+    for portal in inner_portals:
+        for i in inner_portals[portal]:
+            if i != start:
+                distance, possible = traverse_nodes(nodes, start, i)
+                if possible:
+                    available[f"{portal}I"] = distance
+    for portal in outer_portals:
+        for i in outer_portals[portal]:
+            if i != start:
+                distance, possible = traverse_nodes(nodes, start, i)
+                if possible:
+                    available[f"{portal}O"] = distance
+    return available
+
 def load_map(input_file="inputs/day-20.txt"):
     tiles_raw = {}
     # divide the torus into horizontal, vertical, and corner pieces and parse appropriately
@@ -104,20 +140,31 @@ def load_map(input_file="inputs/day-20.txt"):
             else:
                 portal_locations.add(j)
     nodes = {}
+    nodes_no_portals = {}
     for tile in tiles_raw:
         if tiles_raw[tile] == ".":
             adjacent = set()
+            for a in get_adjacent(tile):
+                if tiles_raw[a] == ".":
+                    adjacent.add(a)
+            nodes_no_portals[tile] = adjacent.copy()
             if tile in portal_locations:
                 for portal in portals:
                     if tile in portals[portal]:
                         for i in portals[portal]:
                             if i != tile:
                                 adjacent.add(i)
-            for a in get_adjacent(tile):
-                if tiles_raw[a] == ".":
-                    adjacent.add(a)
-            nodes[tile] = adjacent
-    return tiles_raw, nodes, start, end, outer_set, inner_set
+            nodes[tile] = adjacent.copy()
+
+    portal_connections = {}
+    for portal in inner_portals:
+        for i in inner_portals[portal]:
+            portal_connections[f"{portal}I"] = get_available_portals(i, inner_portals, outer_portals, nodes_no_portals)
+    for portal in outer_portals:
+        for i in outer_portals[portal]:
+            portal_connections[f"{portal}O"] = get_available_portals(i, inner_portals, outer_portals, nodes_no_portals)
+
+    return tiles_raw, nodes, start, end, outer_set, inner_set, portal_connections
 
 def get_map_string(tiles, filled=set()):
     min_tile, max_tile = get_map_bounds(tiles)
@@ -131,76 +178,31 @@ def get_map_string(tiles, filled=set()):
         s += "\n"
     return s
 
-def traverse_nodes(tiles, nodes, pos, end, traversed=-1, optimizations={}):
+def traverse_2d(current_portal, end_portal, portal_connections, traversed=-1):
     if traversed == -1:
-        traversed = set()
-    if pos == end:
-        print("solution")
-        print(get_map_string(tiles, traversed))
+        traversed = set([current_portal])
+    if current_portal[:2] == end_portal[:2]:
         return 0, True
-    optimizer_input = frozenset(set([frozenset(traversed), pos]))
-    if optimizer_input in optimizations:
-        return optimizations[optimizer_input], True
-    adjacent = nodes[pos]
+    adjacent = portal_connections[current_portal]
     min_distance = 0
-    for tile in adjacent:
-        if tile not in traversed:
-            # print(get_map_string(tiles, traversed))
+    for portal in adjacent:
+        if portal not in traversed:
+            portal_opposite = portal[:2] + ("I" if portal[2] == "O" else "O")
             next_traversed = traversed.copy()
-            next_traversed.add(tile)
-            distance, valid = traverse_nodes(tiles, nodes, tile, end, next_traversed, optimizations)
-            distance += 1
+            next_traversed.add(portal)
+            next_traversed.add(portal_opposite)
+            distance, valid = traverse_2d(portal_opposite, end_portal, portal_connections, next_traversed)
+            distance += portal_connections[current_portal][portal]
             if valid:
-                if min_distance == 0:
+                if distance < min_distance or min_distance == 0:
                     min_distance = distance
-                else:
-                    min_distance = min(distance, min_distance)
     if min_distance == 0:
         return 0, False
-    optimizations[optimizer_input] = min_distance
-    return min_distance, True
+    else:
+        return min_distance+1, True
 
-tiles, nodes, start, end, inner_portals, outer_portals = load_map()
-# distance, possible = traverse_nodes(tiles, nodes, start, end)
-# print(f"Part 1: {distance}")
+tiles, _, start, end, _, _, portal_connections = load_map()
+distance, possible = traverse_2d("AAO", "ZZO", portal_connections)
+print(f"Part 1: {distance-1}")
 
-# for part 3 we can basically use the same idea but add in a 3d coordinate which cooresponds to the level we're at
-def traverse_nodes_p2(tiles, nodes, pos, end, inner_portals, outer_portals, traversed=-1, optimizations={}):
-    if traversed == -1:
-        traversed = set()
-    if pos == end:
-        print("solution")
-        print(get_map_string(tiles, traversed))
-        return 0, True
-    pos_2d = (pos[0], pos[1]) # used for adjacency
-    optimizer_input = frozenset(set([frozenset(traversed), pos]))
-    if optimizer_input in optimizations:
-        return optimizations[optimizer_input], True
-    adjacent = nodes[pos_2d]
-    min_distance = 0
-    for tile in adjacent:
-        if tile in inner_portals:
-            tile = (tile[0], tile[1], pos[2]+1)
-        elif tile in outer_portals:
-            tile = (tile[0], tile[1], pos[2]-1)
-        else:
-            tile = (tile[0], tile[1], pos[2])
-        if tile not in traversed:
-            next_traversed = traversed.copy()
-            next_traversed.add(tile)
-            distance, valid = traverse_nodes_p2(tiles, nodes, tile, end, inner_portals, outer_portals, next_traversed, optimizations)
-            distance += 1
-            if valid:
-                if min_distance == 0:
-                    min_distance = distance
-                else:
-                    min_distance = min(distance, min_distance)
-    if min_distance == 0:
-        return 0, False
-    optimizations[optimizer_input] = min_distance
-    return min_distance, True
-
-start_p2 = (start[0], start[1], 0)
-end_p2 = (end[0], end[1], 0)
-distance, possible = traverse_nodes_p2(tiles, nodes, start_p2, end_p2, inner_portals, outer_portals)
-print(distance, possible)
+# for part 2 we can basically use the same idea but add in a 3d coordinate which cooresponds to the level we're at
