@@ -205,4 +205,31 @@ tiles, _, start, end, _, _, portal_connections = load_map()
 distance, possible = traverse_2d("AAO", "ZZO", portal_connections)
 print(f"Part 1: {distance-1}")
 
-# for part 2 we can basically use the same idea but add in a 3d coordinate which cooresponds to the level we're at
+def traverse_p2(portal_connections, path=[("AAO", 0)], best_distance=-1, steps=0, max_depth=26):
+    depth = path[-1][1]
+    if depth > max_depth:
+        return -1
+    if depth == -1:
+        return steps
+    adjacent_portals = portal_connections[path[-1][0]]
+    for portal in adjacent_portals:
+        next_portal = (portal, depth)
+        distance = steps + adjacent_portals[portal] + 1
+        traversable = True
+        if next_portal in path:
+            traversable = False
+        elif next_portal[0][:2] in ["AA", "ZZ"] and depth > 0:
+            traversable = False
+        elif next_portal[0][:2] not in ["AA", "ZZ"] and next_portal[0][2] == "O" and depth == 0:
+            traversable = False
+        elif distance >= best_distance and best_distance != -1:
+            traversable = False
+        if traversable:
+            next_path = path + [next_portal] + [(next_portal[0][:2] + ("O" if next_portal[0][2] == "I" else "I"), depth + (-1 if next_portal[0][2] == "O" else 1))]
+            d = traverse_p2(portal_connections, next_path, best_distance, distance)
+            if d < best_distance or best_distance == -1:
+                best_distance = d
+    return best_distance
+
+best_steps = traverse_p2(portal_connections) - 1
+print(f"Part 2: {best_steps}")
